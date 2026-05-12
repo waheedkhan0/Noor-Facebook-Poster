@@ -36,17 +36,17 @@ const launchBrowser = async () => {
           '--disable-dev-shm-usage',
           '--disable-gpu',
           '--no-zygote',
-          '--window-size=1920x1080',
           ...(config.headless ? ['--headless=new'] : [])
         ],
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
       });
       browserProcess = browser.process();
       page = await browser.newPage();
-      page.setDefaultNavigationTimeout(30000);
+      await page.setViewport({ width: 1920, height: 1080 });
+      page.setDefaultNavigationTimeout(60000);
       await page.setRequestInterception(true);
       page.on('request', (request) => {
-        if (['image', 'stylesheet', 'font'].includes(request.resourceType())) {
+        if (request.resourceType() === 'image') {
           request.abort();
         } else {
           request.continue();
@@ -371,10 +371,24 @@ export const testLogin = async () => {
       const config = loadConfig();
 
       try {
-        await page.waitForSelector('#email', { timeout: 15000 });
+        await page.waitForSelector('#email', { timeout: 20000 });
       } catch {
         addLog('error', `Login form not found (#email). Current URL: ${page.url()}`);
-        await page.screenshot({ path: 'login-debug.png' }).catch(() => {});
+
+        const diagnostics = await page.evaluate(() => ({
+          title: document.title,
+          inputs: Array.from(document.querySelectorAll('input')).map(i => ({ id: i.id, name: i.name, type: i.type, placeholder: i.placeholder })),
+          forms: document.forms.length,
+          bodyText: document.body?.innerText?.substring(0, 500),
+          html: document.documentElement?.innerHTML?.substring(0, 3000)
+        }));
+
+        addLog('error', `Page title: ${diagnostics.title}`);
+        addLog('error', `Inputs found: ${JSON.stringify(diagnostics.inputs)}`);
+        addLog('error', `Forms: ${diagnostics.forms}`);
+        addLog('error', `Body text: ${diagnostics.bodyText}`);
+
+        await page.screenshot({ path: 'login-debug.png', fullPage: true }).catch(() => {});
         botState.loginStatus = 'failed';
         return false;
       }
