@@ -212,6 +212,9 @@ export const automatePosting = async () => {
 
     const emailInput = await page.$('input[name="email"]');
     if (emailInput !== null) {
+      if (!config.fbEmail || !config.fbPassword) {
+        throw new Error('Facebook credentials not configured. Set FB_EMAIL and FB_PASSWORD or use FACEBOOK_COOKIES.');
+      }
       addLog('info', 'Logging in as cookies are not valid or expired');
       await emailInput.type(config.fbEmail, { delay: 0 });
       await page.type('input[name="pass"]', config.fbPassword, { delay: 0 });
@@ -219,6 +222,11 @@ export const automatePosting = async () => {
         page.evaluate(() => document.querySelector('form')?.requestSubmit()),
         page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 })
       ]);
+
+      if (page.url().includes('two_step_verification') || page.url().includes('checkpoint')) {
+        throw new Error('Facebook bot detection triggered (CAPTCHA/checkpoint). Automated login is blocked. Please use FACEBOOK_COOKIES env var with pre-exported cookies instead.');
+      }
+
       await saveCookies(page);
     } else {
       addLog('info', 'Using existing session');
@@ -423,12 +431,18 @@ export const testLogin = async () => {
         await saveCookies(page);
         botState.loginStatus = 'success';
         return true;
+      }
+
+      if (loginDiagnostics.url.includes('two_step_verification') || loginDiagnostics.url.includes('checkpoint')) {
+        addLog('error', 'Facebook served an Arkose Labs CAPTCHA/checkpoint. Automated login is not possible.');
+        addLog('error', 'Solution: Log into Facebook manually in a regular browser, use a cookie editor extension');
+        addLog('error', 'to export cookies as JSON, and set them via FACEBOOK_COOKIES env var or admin config.');
       } else {
         addLog('error', `Login failed. Post-login body: ${loginDiagnostics.bodyText}`);
-        await page.screenshot({ path: 'login-failed.png', fullPage: true }).catch(() => {});
-        botState.loginStatus = 'failed';
-        return false;
       }
+      await page.screenshot({ path: 'login-failed.png', fullPage: true }).catch(() => {});
+      botState.loginStatus = 'failed';
+      return false;
     } else {
       addLog('info', 'Already logged in!');
       botState.loginStatus = 'success';
