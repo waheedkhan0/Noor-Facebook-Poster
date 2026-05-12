@@ -20,7 +20,10 @@ RUN apt-get update && apt-get install -y \
 # Set environment variables
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    NODE_ENV=development
+    NODE_ENV=development \
+    ADMIN_PORT=3000
+
+EXPOSE 3000
 
 # Create and set working directory
 WORKDIR /app

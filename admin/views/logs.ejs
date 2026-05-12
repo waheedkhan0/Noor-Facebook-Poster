@@ -1,0 +1,34 @@
+<%- include('layout-header', { title: 'Logs', currentPage: 'logs' }) %>
+
+<form method="POST" action="/admin/action/clear-logs" style="margin-bottom:1rem;">
+  <button type="submit" class="btn btn-danger btn-sm">Clear Logs</button>
+</form>
+
+<div class="card">
+  <% if (logs.length === 0) { %>
+    <p style="color:#999;">No logs recorded yet.</p>
+  <% } else { %>
+    <div style="max-height:70vh;overflow-y:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:170px;">Time</th>
+            <th style="width:70px;">Level</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (const l of logs) { %>
+            <tr>
+              <td class="log-time"><%= new Date(l.timestamp).toLocaleString() %></td>
+              <td><span class="log-level log-<%= l.level %>"><%= l.level.toUpperCase() %></span></td>
+              <td class="log-msg"><%= l.message %><%= l.data ? ' - ' + JSON.stringify(l.data) : '' %></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('layout-footer') %>

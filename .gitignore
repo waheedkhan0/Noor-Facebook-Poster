@@ -4,3 +4,6 @@ node_modules/
 *.log
 .DS_Store
 cookies.json
+admin/config.json
+admin/history.json
+admin/logs.json

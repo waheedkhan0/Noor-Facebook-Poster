@@ -1,0 +1,114 @@
+<%- include('layout-header', { title: 'Configuration', currentPage: 'config' }) %>
+
+<% if (locals.saved) { %><div class="alert alert-success">Configuration saved successfully. Some changes may require a restart.</div><% } %>
+<% if (locals.error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+<form method="POST" action="/admin/config">
+  <div class="card">
+    <h3>Bot Settings</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="cronSchedule">Cron Schedule</label>
+        <div class="hint">Format: minute hour * * * (e.g., "0 14,18 * * *" = 2PM & 6PM daily)</div>
+        <input type="text" id="cronSchedule" name="cronSchedule" value="<%= config.cronSchedule %>">
+      </div>
+      <div class="form-group">
+        <label for="postDelayMinutes">Post Delay (minutes)</label>
+        <div class="hint">Time to wait after posting for shares to complete</div>
+        <input type="number" id="postDelayMinutes" name="postDelayMinutes" value="<%= config.postDelayMinutes %>" min="1" max="1440">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="maxRetries">Max Retries</label>
+        <div class="hint">Number of retries for API calls</div>
+        <input type="number" id="maxRetries" name="maxRetries" value="<%= config.maxRetries %>" min="0" max="10">
+      </div>
+      <div class="form-group">
+        <label for="retryDelayMs">Retry Delay (ms)</label>
+        <div class="hint">Delay between retry attempts</div>
+        <input type="number" id="retryDelayMs" name="retryDelayMs" value="<%= config.retryDelayMs %>" min="100" step="100">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="maxHadithNumber">Max Hadith Number</label>
+        <div class="hint">Upper bound for random Hadith selection (Sahih Bukhari ~7008)</div>
+        <input type="number" id="maxHadithNumber" name="maxHadithNumber" value="<%= config.maxHadithNumber %>" min="1">
+      </div>
+      <div class="form-group">
+        <label for="maxQuranPage">Max Quran Page</label>
+        <div class="hint">Upper bound for random Quran page selection (604 total)</div>
+        <input type="number" id="maxQuranPage" name="maxQuranPage" value="<%= config.maxQuranPage %>" min="1" max="604">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="headless">Headless Mode</label>
+        <div class="hint">Run browser without GUI (recommended for servers)</div>
+        <select id="headless" name="headless">
+          <option value="true" <%= config.headless ? 'selected' : '' %>>Yes</option>
+          <option value="false" <%= !config.headless ? 'selected' : '' %>>No</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="botEnabled">Bot Enabled</label>
+        <div class="hint">Enable/disable scheduled posting</div>
+        <select id="botEnabled" name="botEnabled">
+          <option value="true" <%= config.botEnabled ? 'selected' : '' %>>Enabled</option>
+          <option value="false" <%= !config.botEnabled ? 'selected' : '' %>>Disabled</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Facebook Settings</h3>
+    <div class="form-group">
+      <label for="fbEmail">Facebook Email</label>
+      <input type="text" id="fbEmail" name="fbEmail" value="<%= config.fbEmail %>">
+    </div>
+    <div class="form-group">
+      <label for="fbPassword">Facebook Password</label>
+      <input type="password" id="fbPassword" name="fbPassword" value="********" placeholder="Leave blank to keep current">
+    </div>
+    <div class="form-group">
+      <label for="facebookCookies">Facebook Cookies (JSON)</label>
+      <div class="hint">Session cookies in JSON array format for production</div>
+      <textarea id="facebookCookies" name="facebookCookies" rows="4" style="font-family:monospace;font-size:0.8rem;"><%= config.facebookCookies %></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Admin Settings</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="adminPort">Admin Port</label>
+        <div class="hint">Port for the admin web interface</div>
+        <input type="number" id="adminPort" name="adminPort" value="<%= config.adminPort %>" min="1024" max="65535">
+      </div>
+      <div class="form-group">
+        <label for="adminUsername">Admin Username</label>
+        <input type="text" id="adminUsername" name="adminUsername" value="<%= config.adminUsername %>">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="adminPassword">Admin Password</label>
+        <div class="hint">Leave blank to keep current</div>
+        <input type="password" id="adminPassword" name="adminPassword" placeholder="Enter new password to change">
+      </div>
+      <div class="form-group">
+        <label for="nodeEnv">Environment</label>
+        <select id="nodeEnv" name="nodeEnv">
+          <option value="development" <%= config.nodeEnv === 'development' ? 'selected' : '' %>>Development</option>
+          <option value="production" <%= config.nodeEnv === 'production' ? 'selected' : '' %>>Production</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary" style="padding:0.75rem 2rem;font-size:1rem;">Save Configuration</button>
+</form>
+
+<%- include('layout-footer') %>

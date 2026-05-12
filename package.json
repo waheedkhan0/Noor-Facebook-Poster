@@ -16,7 +16,10 @@
   "description": "Automated Quran and Hadith posting application",
   "dependencies": {
     "dotenv": "^16.4.5",
+    "bcryptjs": "^2.4.3",
+    "ejs": "^3.1.10",
     "express": "^4.21.1",
+    "express-session": "^1.18.1",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.0",
     "puppeteer": "^23.6.1",

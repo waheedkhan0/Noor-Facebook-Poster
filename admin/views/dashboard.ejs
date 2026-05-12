@@ -1,0 +1,105 @@
+<%- include('layout-header', { title: 'Dashboard', currentPage: 'dashboard' }) %>
+
+<div class="grid-4">
+  <div class="card stat">
+    <div class="value" style="font-size:1.2rem;">
+      <span class="status-badge status-<%= state.status %>"><%= state.status %></span>
+    </div>
+    <div class="label">Bot Status</div>
+  </div>
+  <div class="card stat">
+    <div class="value"><%= state.lastPostTime ? new Date(state.lastPostTime).toLocaleString() : 'N/A' %></div>
+    <div class="label">Last Post</div>
+  </div>
+  <div class="card stat">
+    <div class="value"><%= state.nextPostTime ? new Date(state.nextPostTime).toLocaleString() : 'N/A' %></div>
+    <div class="label">Next Scheduled Post</div>
+  </div>
+  <div class="card stat">
+    <div class="value">
+      <% let loginClass = 'status-idle'; %>
+      <% if (state.loginStatus === 'success') { loginClass = 'status-success'; } %>
+      <% if (state.loginStatus === 'failed') { loginClass = 'status-error'; } %>
+      <span class="status-badge <%= loginClass %>"><%= state.loginStatus || 'untested' %></span>
+    </div>
+    <div class="label">Login Status</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>Actions</h3>
+    <div class="btn-group">
+      <form method="POST" action="/admin/action/post-now" class="inline-form">
+        <button type="submit" class="btn btn-success btn-sm" <%= (state.status === 'posting' || state.status === 'waiting') ? 'disabled' : '' %>>Post Now</button>
+      </form>
+      <form method="POST" action="/admin/action/test-login" class="inline-form">
+        <button type="submit" class="btn btn-warning btn-sm">Test Login</button>
+      </form>
+      <form method="POST" action="/admin/action/restart-cron" class="inline-form">
+        <button type="submit" class="btn btn-primary btn-sm">Restart Cron</button>
+      </form>
+      <form method="POST" action="/admin/action/clear-history" class="inline-form">
+        <button type="submit" class="btn btn-danger btn-sm">Clear History</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Schedule</h3>
+    <table>
+      <tr><td style="font-weight:500;">Cron Expression</td><td><code><%= config.cronSchedule %></code></td></tr>
+      <tr><td style="font-weight:500;">Post Delay</td><td><%= config.postDelayMinutes %> minutes</td></tr>
+      <tr><td style="font-weight:500;">Headless</td><td><%= config.headless ? 'Yes' : 'No' %></td></tr>
+      <tr><td style="font-weight:500;">Bot Enabled</td><td><%= config.botEnabled ? 'Yes' : 'No' %></td></tr>
+      <tr><td style="font-weight:500;">Environment</td><td><%= config.nodeEnv %></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Recent Post History</h3>
+  <% if (history.length === 0) { %>
+    <p style="color:#999;font-size:0.85rem;">No posts yet.</p>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr><th>Time</th><th>Quran Page</th><th>Hadith</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <% for (const h of history.slice(0, 10)) { %>
+          <tr>
+            <td class="log-time"><%= new Date(h.timestamp).toLocaleString() %></td>
+            <td><%= h.quranPage || '-' %></td>
+            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;font-size:0.8rem;">
+              <%= h.hadithText ? h.hadithText.substring(0, 80) + '...' : '-' %>
+            </td>
+            <td><span class="status-badge status-<%= h.status === 'success' ? 'success' : 'error' %>"><%= h.status %></span></td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<div class="card">
+  <h3>Recent Logs</h3>
+  <% if (logs.length === 0) { %>
+    <p style="color:#999;font-size:0.85rem;">No logs yet.</p>
+  <% } else { %>
+    <table>
+      <thead><tr><th>Time</th><th>Level</th><th>Message</th></tr></thead>
+      <tbody>
+        <% for (const l of logs) { %>
+          <tr>
+            <td class="log-time"><%= new Date(l.timestamp).toLocaleString() %></td>
+            <td><span class="log-level log-<%= l.level %>"><%= l.level.toUpperCase() %></span></td>
+            <td class="log-msg"><%= l.message %></td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('layout-footer') %>
