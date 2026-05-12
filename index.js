@@ -359,7 +359,8 @@ export const testLogin = async () => {
       addLog('info', 'No valid cookies found, attempting fresh login...');
     }
 
-    await page.goto('https://www.facebook.com', { waitUntil: 'networkidle0' });
+    await page.goto('https://www.facebook.com/login/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    addLog('info', `Current URL after navigation: ${page.url()}`);
 
     const needsLogin = await page.evaluate(() => {
       return !document.cookie.includes('c_user');
@@ -372,7 +373,7 @@ export const testLogin = async () => {
       try {
         await page.waitForSelector('#email', { timeout: 15000 });
       } catch {
-        addLog('error', 'Login form not found (#email). Page may be blocked or layout changed.');
+        addLog('error', `Login form not found (#email). Current URL: ${page.url()}`);
         await page.screenshot({ path: 'login-debug.png' }).catch(() => {});
         botState.loginStatus = 'failed';
         return false;
@@ -381,7 +382,7 @@ export const testLogin = async () => {
       await page.type('#email', config.fbEmail);
       await page.type('#pass', config.fbPassword);
       await page.click('button[name="login"]');
-      await page.waitForNavigation({ waitUntil: 'networkidle0' });
+      await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 });
 
       const loginSuccessful = await page.evaluate(() => {
         return document.cookie.includes('c_user');
