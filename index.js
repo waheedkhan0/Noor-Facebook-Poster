@@ -206,14 +206,13 @@ export const automatePosting = async () => {
 
     await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    if (await page.$('#email') !== null) {
+    const emailInput = await page.$('input[name="email"]');
+    if (emailInput !== null) {
       addLog('info', 'Logging in as cookies are not valid or expired');
+      await emailInput.type(config.fbEmail, { delay: 0 });
+      await page.type('input[name="pass"]', config.fbPassword, { delay: 0 });
       await Promise.all([
-        page.type('#email', config.fbEmail, { delay: 0 }),
-        page.type('#pass', config.fbPassword, { delay: 0 })
-      ]);
-      await Promise.all([
-        page.click('[name="login"]'),
+        page.evaluate(() => document.querySelector('form')?.requestSubmit()),
         page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 })
       ]);
       await saveCookies(page);
@@ -371,13 +370,14 @@ export const testLogin = async () => {
       const config = loadConfig();
 
       try {
-        await page.waitForSelector('#email', { timeout: 20000 });
+        await page.waitForSelector('input[name="email"]', { timeout: 20000 });
       } catch {
-        addLog('error', `Login form not found (#email). Current URL: ${page.url()}`);
+        addLog('error', `Login form not found (input[name="email"]). Current URL: ${page.url()}`);
 
         const diagnostics = await page.evaluate(() => ({
           title: document.title,
           inputs: Array.from(document.querySelectorAll('input')).map(i => ({ id: i.id, name: i.name, type: i.type, placeholder: i.placeholder })),
+          buttons: Array.from(document.querySelectorAll('button')).map(b => ({ id: b.id, name: b.name, text: b.textContent?.trim()?.substring(0, 30) })),
           forms: document.forms.length,
           bodyText: document.body?.innerText?.substring(0, 500),
           html: document.documentElement?.innerHTML?.substring(0, 3000)
@@ -385,6 +385,7 @@ export const testLogin = async () => {
 
         addLog('error', `Page title: ${diagnostics.title}`);
         addLog('error', `Inputs found: ${JSON.stringify(diagnostics.inputs)}`);
+        addLog('error', `Buttons found: ${JSON.stringify(diagnostics.buttons)}`);
         addLog('error', `Forms: ${diagnostics.forms}`);
         addLog('error', `Body text: ${diagnostics.bodyText}`);
 
@@ -393,10 +394,12 @@ export const testLogin = async () => {
         return false;
       }
 
-      await page.type('#email', config.fbEmail);
-      await page.type('#pass', config.fbPassword);
-      await page.click('button[name="login"]');
-      await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.type('input[name="email"]', config.fbEmail);
+      await page.type('input[name="pass"]', config.fbPassword);
+      await Promise.all([
+        page.evaluate(() => document.querySelector('form')?.requestSubmit()),
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 })
+      ]);
 
       const loginSuccessful = await page.evaluate(() => {
         return document.cookie.includes('c_user');
