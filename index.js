@@ -71,6 +71,10 @@ const loadCookies = async (page) => {
         cookies = runtimeCookies;
       } else {
         addLog('info', 'Loading initial cookies from environment variable');
+        if (!config.facebookCookies || config.facebookCookies.trim() === '') {
+          addLog('info', 'No Facebook cookies configured in environment');
+          return false;
+        }
         try {
           cookies = JSON.parse(config.facebookCookies);
           if (!Array.isArray(cookies)) {
@@ -401,17 +405,27 @@ export const testLogin = async () => {
         page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 })
       ]);
 
-      const loginSuccessful = await page.evaluate(() => {
-        return document.cookie.includes('c_user');
-      });
+      await delay(3000);
 
-      if (loginSuccessful) {
+      const loginDiagnostics = await page.evaluate(() => ({
+        url: window.location.href,
+        title: document.title,
+        hasCUser: document.cookie.includes('c_user'),
+        bodyText: document.body?.innerText?.substring(0, 500)
+      }));
+
+      addLog('info', `Post-login URL: ${loginDiagnostics.url}`);
+      addLog('info', `Post-login title: ${loginDiagnostics.title}`);
+      addLog('info', `Post-login has c_user: ${loginDiagnostics.hasCUser}`);
+
+      if (loginDiagnostics.hasCUser) {
         addLog('info', 'Login successful!');
         await saveCookies(page);
         botState.loginStatus = 'success';
         return true;
       } else {
-        addLog('error', 'Login failed. Check credentials.');
+        addLog('error', `Login failed. Post-login body: ${loginDiagnostics.bodyText}`);
+        await page.screenshot({ path: 'login-failed.png', fullPage: true }).catch(() => {});
         botState.loginStatus = 'failed';
         return false;
       }
