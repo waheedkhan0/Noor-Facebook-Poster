@@ -33,7 +33,9 @@ const launchBrowser = async () => {
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
-          '--window-size=1920x1080'
+          '--no-zygote',
+          '--window-size=1920x1080',
+          '--headless=new'
         ],
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
       });

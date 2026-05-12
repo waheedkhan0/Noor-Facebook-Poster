@@ -7,7 +7,7 @@ const CONFIG_PATH = path.resolve('admin/config.json');
 const DEFAULTS = {
   cronSchedule: process.env.CRON_SCHEDULE || '0 14,18 * * *',
   postDelayMinutes: parseInt(process.env.POST_DELAY_MINUTES || '180'),
-  headless: process.env.NODE_ENV === 'production' || process.env.HEADLESS === 'true',
+  headless: process.env.HEADLESS !== 'false',
   maxRetries: 3,
   retryDelayMs: 5000,
   maxHadithNumber: 7008,
