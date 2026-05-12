@@ -102,14 +102,22 @@ const loadCookies = async (page) => {
     }
 
     if (Array.isArray(cookies) && cookies.length > 0) {
-      cookies = cookies.map(cookie => {
-        if (cookie.sameSite === null || cookie.sameSite === undefined) {
-          cookie.sameSite = "none";
+      const sanitized = cookies.map(cookie => {
+        const validProperties = ['name', 'value', 'url', 'domain', 'path', 'expires', 'httpOnly', 'secure', 'sameSite'];
+        const cleaned = {};
+        for (const key of validProperties) {
+          if (key in cookie) cleaned[key] = cookie[key];
         }
-        return cookie;
+        if (cookie.expirationDate) cleaned.expires = cookie.expirationDate;
+        if (!cleaned.sameSite || cleaned.sameSite === 'no_restriction') {
+          cleaned.sameSite = 'None';
+        } else {
+          cleaned.sameSite = cleaned.sameSite.charAt(0).toUpperCase() + cleaned.sameSite.slice(1).toLowerCase();
+        }
+        return cleaned;
       });
 
-      await page.setCookie(...cookies);
+      await page.setCookie(...sanitized);
       addLog('info', 'Cookies loaded successfully');
       return true;
     } else {
@@ -127,10 +135,14 @@ const saveCookies = async (page) => {
   try {
     const cookies = await page.cookies();
     const validatedCookies = cookies.map(cookie => {
-      if (cookie.sameSite === null || cookie.sameSite === undefined) {
-        cookie.sameSite = "none";
+      const valid = { ...cookie };
+      if (valid.sameSite === null || valid.sameSite === undefined) {
+        valid.sameSite = 'None';
+      } else {
+        valid.sameSite = valid.sameSite.charAt(0).toUpperCase() + valid.sameSite.slice(1).toLowerCase();
       }
-      return cookie;
+      delete valid.storeId;
+      return valid;
     });
 
     if (config.nodeEnv === 'production') {
