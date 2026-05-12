@@ -16,9 +16,11 @@ puppeteer.use(StealthPlugin());
 const extensionPath = path.resolve('./fewfeed');
 
 let browser;
+let browserProcess = null;
 let page;
 let runtimeCookies = null;
 let cronTask = null;
+let isCleaningUp = false;
 
 const launchBrowser = async () => {
   const config = loadConfig();
@@ -35,10 +37,11 @@ const launchBrowser = async () => {
           '--disable-gpu',
           '--no-zygote',
           '--window-size=1920x1080',
-          '--headless=new'
+          ...(config.headless ? ['--headless=new'] : [])
         ],
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
       });
+      browserProcess = browser.process();
       page = await browser.newPage();
       page.setDefaultNavigationTimeout(30000);
       await page.setRequestInterception(true);
@@ -334,6 +337,7 @@ export const automatePosting = async () => {
     if (browser) {
       await browser.close();
       browser = null;
+      browserProcess = null;
       page = null;
       addLog('info', 'Browser closed');
     }
@@ -364,6 +368,16 @@ export const testLogin = async () => {
     if (needsLogin) {
       addLog('info', 'Not logged in, attempting login...');
       const config = loadConfig();
+
+      try {
+        await page.waitForSelector('#email', { timeout: 15000 });
+      } catch {
+        addLog('error', 'Login form not found (#email). Page may be blocked or layout changed.');
+        await page.screenshot({ path: 'login-debug.png' }).catch(() => {});
+        botState.loginStatus = 'failed';
+        return false;
+      }
+
       await page.type('#email', config.fbEmail);
       await page.type('#pass', config.fbPassword);
       await page.click('button[name="login"]');
@@ -396,6 +410,7 @@ export const testLogin = async () => {
     if (browser) {
       await browser.close();
       browser = null;
+      browserProcess = null;
       page = null;
       addLog('info', 'Browser closed after login test');
     }
@@ -426,8 +441,9 @@ const setupCron = () => {
     automatePosting().catch(error => {
       addLog('error', `Failed to complete automation task: ${error.message}`);
       if (browser) {
-        browser.close().catch(console.error);
+        browser.close().catch(() => {});
         browser = null;
+        browserProcess = null;
         page = null;
       }
     });
@@ -462,20 +478,53 @@ const updateNextPostTime = () => {
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-const cleanup = async () => {
+const killBrowserProcess = () => {
+  if (browserProcess && typeof browserProcess.kill === 'function') {
+    try {
+      browserProcess.kill('SIGKILL');
+      addLog('info', 'Browser process forcefully killed');
+    } catch (error) {
+      addLog('error', `Error killing browser process: ${error.message}`);
+    }
+    browserProcess = null;
+  }
+};
+
+const cleanup = async (exitCode = 0) => {
+  if (isCleaningUp) return;
+  isCleaningUp = true;
+
   if (browser) {
     try {
-      await browser.close();
+      await Promise.race([
+        browser.close(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('close timeout')), 10000))
+      ]);
       addLog('info', 'Browser closed during cleanup');
     } catch (error) {
       addLog('error', `Error closing browser during cleanup: ${error.message}`);
+      killBrowserProcess();
     }
+    browser = null;
+    browserProcess = null;
+    page = null;
+  } else if (browserProcess) {
+    killBrowserProcess();
   }
-  process.exit();
+
+  process.exit(exitCode);
 };
 
-process.on('SIGTERM', cleanup);
-process.on('SIGINT', cleanup);
+process.on('SIGTERM', () => cleanup());
+process.on('SIGINT', () => cleanup());
+process.on('uncaughtException', (error) => {
+  addLog('error', `Uncaught exception: ${error.message}`);
+  cleanup(1);
+});
+process.on('unhandledRejection', (reason) => {
+  addLog('error', `Unhandled rejection: ${reason}`);
+  cleanup(1);
+});
 
 startAdminServer();
 
