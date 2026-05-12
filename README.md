@@ -23,6 +23,7 @@ This application leverages the [Fewfeed Chrome Extension](https://fewfeed.com/) 
 - ⏰ Configurable posting schedule using cron expressions
 - 🔄 Automatic session management and login handling
 - 🛡️ Error handling and retry mechanisms
+- 🌐 Web-based admin panel with dashboard, config editor, log viewer, and action controls
 
 ## Prerequisites
 
@@ -34,13 +35,45 @@ This application leverages the [Fewfeed Chrome Extension](https://fewfeed.com/) 
 Create a `.env` file in the root directory with the following variables:
 
 ```env
+# --- Facebook Authentication ---
 FB_EMAIL=your-facebook-email
 FB_PASSWORD=your-facebook-password
-CRON_SCHEDULE=* * * * *  # Cron schedule for posting (e.g., "0 * * * *" for hourly, "0 0 * * *" for daily)
-NODE_ENV=production      # or development
 FACEBOOK_COOKIES=[]      # Array of Facebook session cookies (required for production, leave empty for development)
-HEADLESS=true           # Set to false if you want to see the browser automation process (must be true in production)
+
+# --- Bot Schedule ---
+CRON_SCHEDULE=0 14,18 * * *  # Cron schedule for posting (e.g., "0 * * * *" for hourly, "0 14,18 * * *" for 2PM & 6PM daily)
+
+# --- Bot Behavior ---
+POST_DELAY_MINUTES=180   # Minutes to wait after posting for shares to complete
+HEADLESS=true            # Set to false if you want to see the browser automation process (must be true in production)
+NODE_ENV=development     # or production
+
+# --- Admin Panel ---
+ADMIN_PORT=3000          # Port for the admin web interface
+ADMIN_USERNAME=admin     # Admin panel login username
+ADMIN_PASSWORD=admin123  # Admin panel login password
+SESSION_SECRET=quran-poster-secret-change-in-production  # Session secret for admin panel
+
+# --- Puppeteer ---
+PUPPETEER_EXECUTABLE_PATH=  # Path to Chromium executable (optional, auto-detected if omitted)
 ```
+
+### Environment Variable Reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `FB_EMAIL` | `""` | Facebook account email |
+| `FB_PASSWORD` | `""` | Facebook account password |
+| `FACEBOOK_COOKIES` | `""` | Session cookies JSON array (required in production) |
+| `CRON_SCHEDULE` | `0 14,18 * * *` | Cron expression for posting schedule |
+| `POST_DELAY_MINUTES` | `180` | Wait time after posting (minutes) |
+| `HEADLESS` | `true` (in production) | Run browser without GUI |
+| `NODE_ENV` | `development` | Environment mode |
+| `ADMIN_PORT` | `3000` | Admin panel web port |
+| `ADMIN_USERNAME` | `admin` | Admin login username |
+| `ADMIN_PASSWORD` | `admin123` | Admin login password |
+| `SESSION_SECRET` | `quran-poster-secret-change-in-production` | Express session signing secret |
+| `PUPPETEER_EXECUTABLE_PATH` | `null` | Custom Chromium/Chrome path |
 
 ## Installation
 
@@ -62,16 +95,67 @@ HEADLESS=true           # Set to false if you want to see the browser automation
    node index.js
    ```
 
+5. Open the admin panel:
+   ```
+   http://localhost:3000
+   ```
+
+## Admin Panel
+
+The application includes a full-featured web-based admin panel for managing the bot without editing files directly.
+
+### Access
+
+- URL: `http://localhost:<ADMIN_PORT>` (default `http://localhost:3000`)
+- Login with `ADMIN_USERNAME` / `ADMIN_PASSWORD`
+
+### Pages
+
+| Route | Description |
+|---|---|
+| `/admin/dashboard` | Bot status, last/next post, login state, action buttons |
+| `/admin/config` | Edit all bot settings via a form |
+| `/admin/logs` | View and clear application logs |
+
+### Actions
+
+- **Post Now** - Trigger an immediate posting cycle
+- **Test Login** - Verify Facebook credentials/cookies work
+- **Restart Cron** - Reload the cron schedule from current config
+- **Clear Logs** - Remove all log entries
+- **Clear History** - Remove all post history entries
+
+### Configurable Settings
+
+- Cron schedule, post delay, headless mode, bot enabled/disabled
+- Facebook email, password, cookies
+- Max retries, retry delay, max hadith number, max Quran page
+- Admin port, username, password
+- Environment mode
+
 ## Directory Structure
 
 ```
 .
-├── index.js           # Main application file
-├── fewfeed/          # extension directory, used to post to groups
-├── quran-images/     # Directory containing Quran page images
-├── cookies.json      # Facebook session cookies (first time login by email & password, then save to this file)
-├── .env              # Environment variables
-└── Dockerfile        # Dockerfile for building the application, so you can easy deploy it to Railway or any other platform
+├── index.js              # Main application file
+├── package.json          # Dependencies and scripts
+├── fewfeed/              # Chrome extension for Facebook group posting
+├── quran-images/         # Directory containing Quran page images
+├── cookies.json          # Facebook session cookies (auto-generated)
+├── .env                  # Environment variables
+├── Dockerfile            # Docker configuration for deployment
+├── admin/                # Admin panel module
+│   ├── server.js         # Express web server with routes
+│   ├── config.js         # Configuration management (admin/config.json)
+│   ├── history.js        # Post history tracking (admin/history.json)
+│   ├── logger.js         # Application logging (admin/logs.json)
+│   └── views/            # EJS templates
+│       ├── login.ejs
+│       ├── dashboard.ejs
+│       ├── config.ejs
+│       ├── logs.ejs
+│       ├── layout-header.ejs
+│       └── layout-footer.ejs
 ```
 
 ## Contributing
